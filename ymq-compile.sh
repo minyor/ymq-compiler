@@ -82,12 +82,15 @@ apply_moe_preset() {
     case "$1" in
         b)   PRESET_NAME="BENCHMAXXED";   INPUT_TARGET="Q3_K"; COPY_TARGET="Q6_K"; TINY_TARGET="Q8_0"; HIGH_TARGET="IQ4_NL"; MID_TARGET="IQ4_XS"; LOW_TARGET="IQ3_S";  DEFAULT_TARGET="IQ3_XXS" ;;
 
-        xxs-pro)PRESET_NAME="XXS-Pro"; INPUT_TARGET="Q2_K"; COPY_TARGET="IQ3_S"; TINY_TARGET="IQ3_S"; HIGH_TARGET="IQ3_S"; MID_TARGET="IQ3_XXS"; LOW_TARGET="IQ2_XS";  DEFAULT_TARGET="IQ2_XS"; FLOOR_TARGET="IQ2_XXS"; FLOOR_SCALE="1.5" ;;
+        xxs-pro)PRESET_NAME="XXS-Pro"; INPUT_TARGET="Q2_K"; COPY_TARGET="Q5_K"; TINY_TARGET="Q8_0"; HIGH_TARGET="IQ3_XXS"; MID_TARGET="IQ2_S"; LOW_TARGET="IQ2_XS";  DEFAULT_TARGET="IQ2_XXS"; FLOOR_TARGET="IQ1_S"; FLOOR_SCALE="1.5" ;;
         xxs)PRESET_NAME="XXS";INPUT_TARGET="Q2_K"; COPY_TARGET="IQ4_NL"; TINY_TARGET="Q6_K"; HIGH_TARGET="IQ2_XS"; MID_TARGET="IQ2_XXS"; LOW_TARGET="IQ2_XXS"; DEFAULT_TARGET="IQ2_XXS" ;;
-        xs-pro)PRESET_NAME="XS-Pro"; INPUT_TARGET="Q2_K"; COPY_TARGET="IQ3_S"; TINY_TARGET="IQ3_S"; HIGH_TARGET="IQ4_XS"; MID_TARGET="IQ3_S"; LOW_TARGET="IQ2_S";  DEFAULT_TARGET="IQ2_XS"; FLOOR_TARGET="IQ2_XXS"; FLOOR_SCALE="1.5" ;;
+        xs-pro)PRESET_NAME="XS-Pro"; INPUT_TARGET="Q2_K"; COPY_TARGET="Q5_K"; TINY_TARGET="Q8_0"; HIGH_TARGET="IQ4_XS"; MID_TARGET="IQ3_S"; LOW_TARGET="IQ2_S";  DEFAULT_TARGET="IQ2_XS"; FLOOR_TARGET="IQ2_XS"; FLOOR_SCALE="1.5" ;;
         xs) PRESET_NAME="XS"; INPUT_TARGET="Q3_K"; COPY_TARGET="Q5_K"; TINY_TARGET="Q8_0"; HIGH_TARGET="IQ3_S"; MID_TARGET="IQ2_S"; LOW_TARGET="IQ2_XS"; DEFAULT_TARGET="IQ2_XS" ;;
+        s-ti)PRESET_NAME="S-TI"; INPUT_TARGET="Q2_K"; COPY_TARGET="IQ4_XS"; TINY_TARGET="IQ4_XS"; HIGH_TARGET="Q5_K"; MID_TARGET="IQ4_XS"; LOW_TARGET="IQ3_XXS";  DEFAULT_TARGET="IQ2_S"; FLOOR_TARGET="IQ2_XS"; FLOOR_SCALE="1.5" ;;
         s)  PRESET_NAME="S";  INPUT_TARGET="Q3_K"; COPY_TARGET="Q6_K"; TINY_TARGET="Q8_0"; HIGH_TARGET="IQ4_NL"; MID_TARGET="IQ3_S"; LOW_TARGET="IQ3_XXS"; DEFAULT_TARGET="IQ2_S" ;;
+        m-ti)PRESET_NAME="M-TI"; INPUT_TARGET="Q2_K"; COPY_TARGET="Q5_K"; TINY_TARGET="Q8_0"; HIGH_TARGET="Q6_K"; MID_TARGET="IQ4_NL"; LOW_TARGET="IQ3_XXS";  DEFAULT_TARGET="IQ2_S"; FLOOR_TARGET="IQ2_XS"; FLOOR_SCALE="1.5" ;;
         m)   PRESET_NAME="M";   INPUT_TARGET="Q3_K"; COPY_TARGET="Q6_K"; TINY_TARGET="Q8_0"; HIGH_TARGET="Q5_K";   MID_TARGET="IQ4_XS"; LOW_TARGET="IQ3_S";  DEFAULT_TARGET="IQ3_XXS" ;;
+        l-ti)PRESET_NAME="L-TI"; INPUT_TARGET="Q2_K"; COPY_TARGET="IQ4_XS"; TINY_TARGET="IQ4_XS"; HIGH_TARGET="Q6_K"; MID_TARGET="IQ4_NL"; LOW_TARGET="IQ3_XXS";  DEFAULT_TARGET="IQ3_XXS"; FLOOR_TARGET="IQ3_XXS"; FLOOR_SCALE="1.5" ;;
         l)   PRESET_NAME="L";   INPUT_TARGET="Q4_K"; COPY_TARGET="Q6_K"; TINY_TARGET="Q8_0"; HIGH_TARGET="Q6_K";   MID_TARGET="Q5_K";   LOW_TARGET="IQ4_NL"; DEFAULT_TARGET="IQ3_S" ;;
         xl)  PRESET_NAME="XL";  INPUT_TARGET="Q4_K"; COPY_TARGET="Q6_K"; TINY_TARGET="Q8_0"; HIGH_TARGET="Q6_K";   MID_TARGET="Q6_K";   LOW_TARGET="Q5_K";   DEFAULT_TARGET="IQ4_NL" ;;
         *) echo "ERROR: Unknown preset '$1'. Available presets: ex1, xxs, xs, s, m, l, xl" >&2; exit 1 ;;
@@ -163,7 +166,7 @@ if ! command -v python3 &>/dev/null; then
     exit 1
 fi
 
-QUANT_ARGS=$(python3 - "$IMATRIX_PATH" "$SOURCE_GGUF" "$INPUT_TARGET" "$HIGH_TARGET" "$MID_TARGET" "$LOW_TARGET" "$FLOOR_TARGET" "$FLOOR_SCALE" "$COPY_TARGET" "$TINY_TARGET" "$DEFAULT_TARGET" "$SMALL_THRESHOLD" "$TINY_THRESHOLD" "$HAS_MTP" "$FALLBACK_TARGET" "$PER_LAYER_TOKEN_EMBD_TARGET" <<EOF
+QUANT_ARGS=$(python3 - "$IMATRIX_PATH" "$SOURCE_GGUF" "$INPUT_TARGET" "$HIGH_TARGET" "$MID_TARGET" "$LOW_TARGET" "$FLOOR_TARGET" "$FLOOR_SCALE" "$COPY_TARGET" "$TINY_TARGET" "$DEFAULT_TARGET" "$SMALL_THRESHOLD" "$TINY_THRESHOLD" "$HAS_MTP" "$FALLBACK_TARGET" "$PER_LAYER_TOKEN_EMBD_TARGET" "$MODEL_ARCH" <<EOF
 import re
 import os
 import struct
@@ -385,7 +388,7 @@ def ymq_stage1_analysis(imatrix_path, gguf_path):
 # ==============================================================================
 # YMQ Stage 2: Adaptive Target Assignment & Script Generation
 # ==============================================================================
-def ymq_stage2_assign_targets(data, input_target, high_target, mid_target, low_target, floor_target, floor_scale, copy_target, tiny_target, default_target, small_threshold_gb, tiny_threshold_gb, has_mtp, fallback_target="Q3_K", per_layer_token_embd_target="IQ4_NL"):
+def ymq_stage2_assign_targets(data, input_target, high_target, mid_target, low_target, floor_target, floor_scale, copy_target, tiny_target, default_target, small_threshold_gb, tiny_threshold_gb, has_mtp, fallback_target="Q3_K", per_layer_token_embd_target="IQ4_NL", model_arch="dense"):
     """YMQ Core Algorithm: Assign quantization targets dynamically.
 
     Architecture-Agnostic Logic (NO hardcoded array names):
@@ -467,6 +470,8 @@ def ymq_stage2_assign_targets(data, input_target, high_target, mid_target, low_t
         'post_attention_norm', 'post_ffw_norm', 'layer_output_scale',
         'ssm_norm', 'ssm_a', 'ssm_conv1d', 'ssm_dt.bias', 'ffn_gate_inp'
     ]
+    if model_arch == "moe":
+        norm_patterns.extend(['ssm_beta', 'hc_attn_inject', 'hc_ffn_inject'])
 
     # --- Protected arrays with fixed targets (excluded from main algorithm) ---
     protected_patterns = ['attn_output']
@@ -791,10 +796,12 @@ def ymq_stage2_assign_targets(data, input_target, high_target, mid_target, low_t
                 layer_best_target[layer_num] = get_best_target(layer_best_target[layer_num], assigned_target)
                 layer_best_score[layer_num] = max(layer_best_score[layer_num], score)
 
-            # Emit per-layer specific patterns (not a single wildcard).
-            # Layers getting DEFAULT_TARGET are omitted - they fall through to the positional default arg.
-            if assigned_target != DEFAULT_TARGET:
-                cmd_parts.append(f"--tensor-type blk.{layer_num}.{base_name}={assigned_target}")
+            # Emit an explicit per-layer pattern for EVERY layer of this scored array.
+            # We must NOT omit layers that happen to land on DEFAULT_TARGET/FLOOR_TARGET:
+            # there is no wildcard base target emitted for scored arrays, so any omitted
+            # layer would fall through to the Step 7 coverage fallback (FALLBACK_TARGET,
+            # typically IQ4_NL) instead of its predicted target, inflating the output file.
+            cmd_parts.append(f"--tensor-type blk.{layer_num}.{base_name}={assigned_target}")
 
     # Collect ALL applicable targets per layer and pick the finest using get_best_target()
     small_tiny_ffn_layers = {}
@@ -938,7 +945,9 @@ def ymq_stage2_assign_targets(data, input_target, high_target, mid_target, low_t
             if tensor_name.startswith("blk."):
                 parts = tensor_name.split(".")
                 if len(parts) >= 3 and parts[1].isdigit():
-                    pattern = f"blk.*.{parts[2]}"
+                    # Preserve everything after the layer index (e.g. "ffn_down_exps.weight",
+                    # "indexer.q_proj.weight") so the wildcard actually matches real tensor names.
+                    pattern = f"blk.*.{'.'.join(parts[2:])}"
                 else:
                     pattern = tensor_name
             else:
@@ -1212,6 +1221,7 @@ tiny_threshold_gb = sys.argv[13] if len(sys.argv) > 13 else "0.1"
 has_mtp_flag = sys.argv[14] if len(sys.argv) > 14 else "false"
 fallback_target = sys.argv[15] if len(sys.argv) > 15 else "Q3_K"
 per_layer_token_embd_target = sys.argv[16] if len(sys.argv) > 16 else "IQ4_NL"
+model_arch = sys.argv[17] if len(sys.argv) > 17 else "dense"
 
 # Validate thresholds are valid positive floats
 try:
@@ -1232,7 +1242,7 @@ if _invalid:
     sys.exit(1)
 
 data = ymq_stage1_analysis(imatrix_path, gguf_path)
-target_data = ymq_stage2_assign_targets(data, input_target, high_target, mid_target, low_target, floor_target, floor_scale, copy_target, tiny_target, default_target, small_threshold_gb, tiny_threshold_gb, has_mtp_flag, fallback_target, per_layer_token_embd_target)
+target_data = ymq_stage2_assign_targets(data, input_target, high_target, mid_target, low_target, floor_target, floor_scale, copy_target, tiny_target, default_target, small_threshold_gb, tiny_threshold_gb, has_mtp_flag, fallback_target, per_layer_token_embd_target, model_arch)
 ymq_stage3_visualize(data, target_data)
 for arg in target_data['cmd_parts']:
     print("    " + arg + " \\\\")
